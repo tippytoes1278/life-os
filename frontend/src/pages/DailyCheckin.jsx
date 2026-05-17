@@ -21,7 +21,7 @@ export default function DailyCheckin() {
   async function handleSubmit(entry) {
     const { data, error } = await supabase
       .from('checkins')
-      .insert({ mood: entry.mood, energy: entry.energy, wins: entry.wins })
+      .insert({ mood: entry.mood, energy: entry.energy, wins: entry.wins, weight_kg: entry.weight ?? null })
       .select()
       .single()
     if (!error) setEntries((prev) => [{ ...data, date: data.logged_at }, ...prev])

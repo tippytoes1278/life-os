@@ -1,3 +1,5 @@
+import WeightGraph from './WeightGraph'
+
 const MOOD_EMOJI   = ['', '😞', '😕', '😐', '🙂', '😄']
 const ENERGY_EMOJI = ['', '🪫', '😴', '⚡', '🔥', '🚀']
 
@@ -14,9 +16,14 @@ function HistoryCard({ entry }) {
         <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">
           {formatDate(entry.date)}
         </span>
-        <div className="flex gap-2 text-lg">
-          <span title={`Mood ${entry.mood}/5`}>{MOOD_EMOJI[entry.mood]}</span>
-          <span title={`Energy ${entry.energy}/5`}>{ENERGY_EMOJI[entry.energy]}</span>
+        <div className="flex items-center gap-3">
+          {entry.weight_kg && (
+            <span className="text-xs font-semibold text-violet-400 tabular-nums">{entry.weight_kg} kg</span>
+          )}
+          <div className="flex gap-2 text-lg">
+            <span title={`Mood ${entry.mood}/5`}>{MOOD_EMOJI[entry.mood]}</span>
+            <span title={`Energy ${entry.energy}/5`}>{ENERGY_EMOJI[entry.energy]}</span>
+          </div>
         </div>
       </div>
       {entry.wins?.length > 0 && (
@@ -41,8 +48,17 @@ export default function CheckinHistory({ entries = [] }) {
       </div>
     )
   }
+
+  const hasWeight = entries.some((e) => e.weight_kg != null)
+
   return (
     <div className="px-4 pb-4">
+      {hasWeight && (
+        <>
+          <p className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-2 px-1">Weight</p>
+          <WeightGraph entries={entries} />
+        </>
+      )}
       <p className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-3 px-1">History</p>
       {entries.map((entry, i) => <HistoryCard key={i} entry={entry} />)}
     </div>

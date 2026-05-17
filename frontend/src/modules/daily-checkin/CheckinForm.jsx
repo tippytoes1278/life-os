@@ -67,6 +67,7 @@ export default function CheckinForm({ onSubmit }) {
   const [mood, setMood]         = useState(null)
   const [energy, setEnergy]     = useState(null)
   const [wins, setWins]         = useState(['', '', ''])
+  const [weight, setWeight]     = useState('')
   const [submitted, setSubmitted] = useState(false)
 
   const isValid = mood !== null && energy !== null && wins.some((w) => w.trim())
@@ -74,7 +75,12 @@ export default function CheckinForm({ onSubmit }) {
   function handleSubmit(e) {
     e.preventDefault()
     if (!isValid) return
-    onSubmit?.({ mood, energy, wins: wins.filter((w) => w.trim()), date: new Date().toISOString() })
+    onSubmit?.({
+      mood, energy,
+      wins: wins.filter((w) => w.trim()),
+      weight: weight !== '' ? Number(weight) : null,
+      date: new Date().toISOString(),
+    })
     setSubmitted(true)
   }
 
@@ -85,7 +91,7 @@ export default function CheckinForm({ onSubmit }) {
         <h2 className="text-xl font-bold text-zinc-100">Check-in complete!</h2>
         <p className="text-zinc-500 mt-1 text-sm">Great work logging today.</p>
         <button
-          onClick={() => { setMood(null); setEnergy(null); setWins(['', '', '']); setSubmitted(false) }}
+          onClick={() => { setMood(null); setEnergy(null); setWins(['', '', '']); setWeight(''); setSubmitted(false) }}
           className="mt-6 text-sm text-violet-400 underline underline-offset-2"
         >
           Log another
@@ -99,6 +105,17 @@ export default function CheckinForm({ onSubmit }) {
       <ScalePicker label="Mood" type="mood" value={mood} onChange={setMood} />
       <ScalePicker label="Energy" type="energy" value={energy} onChange={setEnergy} />
       <WinsInput wins={wins} onChange={setWins} />
+      <div className="mb-6">
+        <p className="text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-2">
+          Body Weight <span className="normal-case font-normal text-zinc-600">kg — optional</span>
+        </p>
+        <input
+          type="number" min="20" max="300" step="0.1" value={weight}
+          onChange={(e) => setWeight(e.target.value)} placeholder="e.g. 75.5"
+          className="w-full bg-zinc-800 border-2 border-zinc-700 text-zinc-100 placeholder:text-zinc-600
+            px-4 py-3 rounded-xl text-sm focus:outline-none focus:border-violet-500 transition-colors"
+        />
+      </div>
       <button
         type="submit"
         disabled={!isValid}

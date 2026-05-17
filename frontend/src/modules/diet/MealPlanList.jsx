@@ -27,32 +27,33 @@ function MealRow({ meal, done, protein, onToggle, onProteinChange, isLast }) {
         </p>
       </div>
 
-      <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-        <input
-          type="number"
-          min="0"
-          max="200"
-          value={protein}
-          onChange={(e) => onProteinChange(e.target.value)}
-          className="w-10 bg-zinc-800 text-green-400 text-sm font-bold text-right rounded-lg px-1.5 py-1 border border-transparent focus:border-zinc-600 focus:outline-none tabular-nums"
-        />
-        <span className="text-xs text-zinc-600">g</span>
+      <div className="flex flex-col items-end gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-1">
+          <input
+            type="number" min="0" max="200" value={protein}
+            onChange={(e) => onProteinChange(e.target.value)}
+            className="w-10 bg-zinc-800 text-green-400 text-sm font-bold text-right rounded-lg px-1.5 py-1 border border-transparent focus:border-zinc-600 focus:outline-none tabular-nums"
+          />
+          <span className="text-xs text-zinc-600">g</span>
+        </div>
+        <span className="text-xs text-zinc-600 tabular-nums">{meal.calories} kcal</span>
       </div>
     </div>
   )
 }
 
-export default function MealPlanList({ meals, onTotalChange }) {
+export default function MealPlanList({ meals, onTotalsChange }) {
   const [done, setDone]       = useState({})
   const [protein, setProtein] = useState(
     Object.fromEntries(meals.map((m) => [m.id, String(m.protein)]))
   )
 
   function recompute(nextDone, nextProtein) {
-    const total = meals
-      .filter((m) => nextDone[m.id])
-      .reduce((sum, m) => sum + Number(nextProtein[m.id] || 0), 0)
-    onTotalChange(total)
+    const checked = meals.filter((m) => nextDone[m.id])
+    onTotalsChange({
+      protein:  checked.reduce((s, m) => s + Number(nextProtein[m.id] || 0), 0),
+      calories: checked.reduce((s, m) => s + (m.calories || 0), 0),
+    })
   }
 
   function toggle(id) {
