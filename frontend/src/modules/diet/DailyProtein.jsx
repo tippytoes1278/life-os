@@ -24,8 +24,9 @@ function MealRow({ meal, onDelete }) {
   )
 }
 
-export default function DailyProtein({ meals, onDelete }) {
-  const total     = meals.reduce((sum, m) => sum + Number(m.protein_g), 0)
+export default function DailyProtein({ meals, onDelete, totalOverride }) {
+  const customTotal = meals.reduce((sum, m) => sum + Number(m.protein_g), 0)
+  const total       = totalOverride !== undefined ? totalOverride : customTotal
   const remaining = Math.max(PROTEIN_TARGET - total, 0)
   const pct       = Math.min((total / PROTEIN_TARGET) * 100, 100)
   const reached   = total >= PROTEIN_TARGET

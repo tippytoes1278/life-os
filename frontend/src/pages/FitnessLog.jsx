@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import WorkoutForm from '../modules/fitness-log/WorkoutForm'
 import WorkoutHistory from '../modules/fitness-log/WorkoutHistory'
+import { getTodayTemplate } from '../data/workoutTemplates'
 
 function toEntryShape(row) {
   return {
@@ -50,17 +51,25 @@ export default function FitnessLog() {
     setEntries((prev) => [toEntryShape({ ...data, workout_exercises: entry.exercises || [] }), ...prev])
   }
 
-  const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+  const today    = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+  const template = getTodayTemplate()
 
   return (
     <div className="min-h-screen bg-zinc-950 max-w-md mx-auto">
-      <div className="px-5 pt-14 pb-6">
+      <div className="px-5 pt-14 pb-4">
         <p className="text-xs font-semibold text-blue-400 uppercase tracking-widest mb-1">Fitness Log</p>
         <h1 className="text-3xl font-bold text-zinc-50 tracking-tight">{today}</h1>
+        <p className="text-sm text-blue-300 mt-1.5 font-medium">Today: {template.label} Day</p>
       </div>
 
       <div className="mx-4 bg-zinc-900 rounded-2xl border border-zinc-800 overflow-hidden mb-4">
-        <WorkoutForm onSubmit={handleSubmit} />
+        <WorkoutForm
+          onSubmit={handleSubmit}
+          defaultType={template.type}
+          defaultExercises={template.exercises}
+          defaultDuration={template.duration}
+          defaultNotes={template.notes}
+        />
       </div>
 
       <div className="pb-6">

@@ -11,12 +11,12 @@ const TYPE_META = {
 }
 const SHOWS_EXERCISES = ['Push', 'Pull', 'Legs']
 
-export default function WorkoutForm({ onSubmit }) {
-  const [type, setType]           = useState('')
-  const [duration, setDuration]   = useState('')
+export default function WorkoutForm({ onSubmit, defaultType = '', defaultExercises = [], defaultDuration = '', defaultNotes = '' }) {
+  const [type, setType]           = useState(defaultType)
+  const [duration, setDuration]   = useState(defaultDuration)
   const [weight, setWeight]       = useState('')
-  const [notes, setNotes]         = useState('')
-  const [exercises, setExercises] = useState([])
+  const [notes, setNotes]         = useState(defaultNotes)
+  const [exercises, setExercises] = useState(defaultExercises)
   const [submitted, setSubmitted] = useState(false)
 
   const isRest  = type === 'Rest'
@@ -42,7 +42,7 @@ export default function WorkoutForm({ onSubmit }) {
         <span className="text-5xl mb-4">{TYPE_META[type]?.emoji}</span>
         <h2 className="text-xl font-bold text-zinc-100">Workout logged!</h2>
         <p className="text-zinc-500 mt-1 text-sm">Keep the momentum going.</p>
-        <button onClick={() => { setType(''); setDuration(''); setWeight(''); setNotes(''); setExercises([]); setSubmitted(false) }}
+        <button onClick={() => { setType(defaultType); setDuration(defaultDuration); setWeight(''); setNotes(defaultNotes); setExercises(defaultExercises); setSubmitted(false) }}
           className="mt-6 text-sm text-blue-400 underline underline-offset-2">Log another</button>
       </div>
     )
@@ -56,7 +56,7 @@ export default function WorkoutForm({ onSubmit }) {
           const selected = type === t
           return (
             <button key={t} type="button"
-              onClick={() => { setType(t); setExercises([]) }}
+              onClick={() => { setType(t); setExercises(t === defaultType ? defaultExercises : []) }}
               className={`flex flex-col items-center py-3 rounded-xl border-2 transition-all duration-150 ${
                 selected ? TYPE_META[t].sel + ' scale-105' : 'border-zinc-700 bg-zinc-800 hover:border-zinc-600'
               }`}>

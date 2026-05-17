@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import MealForm from '../modules/diet/MealForm'
 import DailyProtein from '../modules/diet/DailyProtein'
+import MealPlanList from '../modules/diet/MealPlanList'
+import { MEAL_PLAN, DAILY_TARGET } from '../data/mealTemplates'
 
 function todayBounds() {
   const start = new Date()
@@ -12,8 +14,9 @@ function todayBounds() {
 }
 
 export default function Diet() {
-  const [meals, setMeals]     = useState([])
-  const [loading, setLoading] = useState(true)
+  const [meals, setMeals]             = useState([])
+  const [loading, setLoading]         = useState(true)
+  const [templateTotal, setTemplateTotal] = useState(0)
 
   useEffect(() => {
     const { start, end } = todayBounds()
@@ -41,6 +44,8 @@ export default function Diet() {
     await supabase.from('diet_logs').delete().eq('id', id)
   }
 
+  const customProtein = meals.reduce((sum, m) => sum + Number(m.protein_g), 0)
+  const totalProtein  = templateTotal + customProtein
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
 
   return (
@@ -50,14 +55,22 @@ export default function Diet() {
         <h1 className="text-3xl font-bold text-zinc-50 tracking-tight">{today}</h1>
       </div>
 
-      <MealForm onAdd={handleAdd} />
-
-      <div className="pb-6">
+      {/* Protein progress */}
+      <div className="pb-4">
         {loading
-          ? <p className="text-center text-sm text-zinc-600 py-10">Loading…</p>
-          : <DailyProtein meals={meals} onDelete={handleDelete} />
+          ? <p className="text-center text-sm text-zinc-600 py-6">Loading…</p>
+          : <DailyProtein meals={meals} onDelete={handleDelete} totalOverride={totalProtein} />
         }
       </div>
+
+      {/* Template meal plan */}
+      <MealPlanList meals={MEAL_PLAN} onTotalChange={setTemplateTotal} />
+
+      {/* Custom meal form */}
+      <div className="px-4 pt-4 pb-2">
+        <p className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-2 px-1">Add Extra Meal</p>
+      </div>
+      <MealForm onAdd={handleAdd} />
     </div>
   )
 }
