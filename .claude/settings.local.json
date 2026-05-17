@@ -11,7 +11,19 @@
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
       "Bash(git commit -m 'Add vercel.json to deploy frontend only *)",
-      "Bash(git commit -m 'Fix vercel.json build command for frontend root directory *)"
+      "Bash(git commit -m 'Fix vercel.json build command for frontend root directory *)",
+      "Bash(grep -o 'workoutTemplates.\\\\{0,100\\\\}js[^}]\\\\{0,3000\\\\}' /Users/Ayush/.claude/projects/-Users-Ayush-Documents-life-os/2bbe4a26-00fe-4395-8afd-8337b7191373.jsonl)",
+      "Bash(git -C /Users/Ayush/Documents/life-os status)",
+      "Bash(git -C /Users/Ayush/Documents/life-os log --oneline -5)",
+      "Bash(git -C /Users/Ayush/Documents/life-os add frontend/src/data/workoutTemplates.js frontend/src/modules/fitness-log/WorkoutForm.jsx)",
+      "Bash(git -C /Users/Ayush/Documents/life-os commit -m 'Load exercises from template when user taps workout type *)",
+      "Bash(git -C /Users/Ayush/Documents/life-os push origin master)",
+      "Bash(ping -c 1 github.com)",
+      "Bash(node -e ' *)",
+      "Bash(git -C /Users/Ayush/Documents/life-os add backend/migrations/003_weight_calories.sql frontend/src/data/mealTemplates.js frontend/src/modules/diet/MealPlanList.jsx frontend/src/modules/diet/DailyProtein.jsx frontend/src/modules/diet/MealForm.jsx frontend/src/pages/Diet.jsx frontend/src/modules/daily-checkin/CheckinForm.jsx frontend/src/pages/DailyCheckin.jsx frontend/src/modules/daily-checkin/WeightGraph.jsx frontend/src/modules/daily-checkin/CheckinHistory.jsx)",
+      "Bash(git -C /Users/Ayush/Documents/life-os add backend/migrations/004_workout_sets_progress.sql backend/src/controllers/dietController.js backend/src/controllers/reviewController.js backend/src/routes/diet.js backend/src/routes/review.js backend/src/index.js frontend/src/data/workoutTemplates.js frontend/src/modules/fitness-log/ExerciseList.jsx frontend/src/modules/fitness-log/WorkoutForm.jsx frontend/src/pages/FitnessLog.jsx frontend/src/modules/diet/MealForm.jsx frontend/src/pages/Progress.jsx frontend/src/App.jsx frontend/src/pages/WeeklyReview.jsx)",
+      "Bash(git -C /Users/Ayush/Documents/life-os status --short)",
+      "Bash(git -C /Users/Ayush/Documents/life-os commit -m 'Add per-set logging, AI meal scan, progress photos, WhatsApp delivery *)"
     ]
   }
 }
