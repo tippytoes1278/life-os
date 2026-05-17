@@ -51,10 +51,12 @@ function formatWeekLabel(monday, sunday) {
 }
 
 export default function WeeklyReview() {
-  const [rawData, setRawData]       = useState(null)
-  const [review, setReview]         = useState('')
-  const [generating, setGenerating] = useState(false)
-  const [genError, setGenError]     = useState('')
+  const [rawData, setRawData]           = useState(null)
+  const [review, setReview]             = useState('')
+  const [generating, setGenerating]     = useState(false)
+  const [genError, setGenError]         = useState('')
+  const [waStatus, setWaStatus]         = useState('') // 'sending' | 'sent' | 'error'
+  const [waMessage, setWaMessage]       = useState('')
 
   useEffect(() => {
     const { monday, sunday } = getWeekBounds()
@@ -67,6 +69,18 @@ export default function WeeklyReview() {
       setRawData({ checkins: c.data || [], habits: h.data || [], fitness: f.data || [] })
     })
   }, [])
+
+  async function handleWhatsApp() {
+    setWaStatus('sending'); setWaMessage('')
+    try {
+      const res = await fetch(`${API_URL}/api/review/whatsapp`, { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || `Error ${res.status}`)
+      setWaStatus('sent'); setWaMessage(data.message || 'Sent!')
+    } catch (err) {
+      setWaStatus('error'); setWaMessage(err.message || 'Failed to send')
+    }
+  }
 
   async function handleGenerate() {
     setGenerating(true); setGenError(''); setReview('')
@@ -116,10 +130,21 @@ export default function WeeklyReview() {
           <div className="bg-zinc-900 rounded-2xl border border-amber-500/20 p-5">
             <p className="text-xs font-semibold text-amber-400 uppercase tracking-widest mb-3">AI Review</p>
             <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap">{review}</p>
-            <button onClick={handleGenerate} disabled={generating}
-              className="mt-4 text-xs text-amber-500 underline underline-offset-2 disabled:opacity-40">
-              {generating ? 'Regenerating…' : 'Regenerate'}
-            </button>
+            <div className="flex items-center justify-between mt-4">
+              <button onClick={handleGenerate} disabled={generating}
+                className="text-xs text-amber-500 underline underline-offset-2 disabled:opacity-40">
+                {generating ? 'Regenerating…' : 'Regenerate'}
+              </button>
+              <button onClick={handleWhatsApp} disabled={waStatus === 'sending'}
+                className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${
+                  waStatus === 'sending'  ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed' :
+                  waStatus === 'sent'     ? 'bg-green-900/50 text-green-400' :
+                  'bg-zinc-800 text-green-400 hover:bg-zinc-700'
+                }`}>
+                {waStatus === 'sending' ? '⏳ Sending…' : waStatus === 'sent' ? '✓ Sent!' : '📱 Send to WhatsApp'}
+              </button>
+            </div>
+            {waStatus === 'error' && <p className="text-xs text-red-400 mt-2">{waMessage}</p>}
           </div>
         )}
       </div>

@@ -14,19 +14,40 @@ function toEntryShape(row) {
   }
 }
 
+// Build lastSession map: { exerciseName: { setNumber: { weight_kg, reps } } }
+function buildLastSession(rows) {
+  const session = {}
+  for (const row of rows) {
+    if (!session[row.exercise_name]) session[row.exercise_name] = {}
+    if (!session[row.exercise_name][row.set_number]) {
+      session[row.exercise_name][row.set_number] = { weight_kg: row.weight_kg, reps: row.reps }
+    }
+  }
+  return session
+}
+
 export default function FitnessLog() {
-  const [entries, setEntries] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [entries, setEntries]       = useState([])
+  const [loading, setLoading]       = useState(true)
+  const [lastSession, setLastSession] = useState({})
+  const template = getTodayTemplate()
 
   useEffect(() => {
-    supabase
-      .from('fitness_logs')
-      .select('*, workout_exercises(*)')
-      .order('logged_at', { ascending: false })
-      .then(({ data }) => {
-        setEntries((data || []).map(toEntryShape))
-        setLoading(false)
-      })
+    const exerciseNames = template.exercises.map((e) => e.name)
+    Promise.all([
+      supabase.from('fitness_logs').select('*, workout_exercises(*)').order('logged_at', { ascending: false }),
+      exerciseNames.length
+        ? supabase.from('workout_sets')
+            .select('exercise_name, set_number, weight_kg, reps, created_at')
+            .in('exercise_name', exerciseNames)
+            .order('created_at', { ascending: false })
+            .limit(500)
+        : Promise.resolve({ data: [] }),
+    ]).then(([logsRes, setsRes]) => {
+      setEntries((logsRes.data || []).map(toEntryShape))
+      setLastSession(buildLastSession(setsRes.data || []))
+      setLoading(false)
+    })
   }, [])
 
   async function handleSubmit(entry) {
@@ -36,23 +57,44 @@ export default function FitnessLog() {
         body_weight_kg: entry.weight ?? null, notes: entry.notes ?? null })
       .select().single()
     if (error) return
-    if (entry.exercises?.length) {
+
+    const validExercises = (entry.exercises || []).filter((ex) => ex.name.trim())
+
+    // workout_exercises — backward-compat history display (max weight per exercise)
+    if (validExercises.length) {
       await supabase.from('workout_exercises').insert(
-        entry.exercises.map((ex, i) => ({
-          fitness_log_id: data.id,
-          name: ex.name.trim(),
-          sets: ex.sets ? Number(ex.sets) : null,
-          reps: ex.reps ? Number(ex.reps) : null,
-          weight_kg: ex.weight_kg ? Number(ex.weight_kg) : null,
-          order_index: i,
-        }))
+        validExercises.map((ex, i) => {
+          const weights = ex.sets.map((s) => Number(s.weight_kg) || 0).filter(Boolean)
+          return {
+            fitness_log_id: data.id,
+            name:       ex.name.trim(),
+            sets:       ex.sets.length,
+            reps:       ex.sets[0]?.reps ? Number(ex.sets[0].reps) : null,
+            weight_kg:  weights.length ? Math.max(...weights) : null,
+            order_index: i,
+          }
+        })
       )
     }
-    setEntries((prev) => [toEntryShape({ ...data, workout_exercises: entry.exercises || [] }), ...prev])
+
+    // workout_sets — per-set storage for last-session hints
+    const setsToInsert = validExercises.flatMap((ex) =>
+      ex.sets
+        .map((s, idx) => ({
+          fitness_log_id: data.id,
+          exercise_name:  ex.name.trim(),
+          set_number:     idx + 1,
+          weight_kg:      s.weight_kg ? Number(s.weight_kg) : null,
+          reps:           s.reps ? Number(s.reps) : null,
+        }))
+        .filter((s) => s.weight_kg || s.reps)
+    )
+    if (setsToInsert.length) await supabase.from('workout_sets').insert(setsToInsert)
+
+    setEntries((prev) => [toEntryShape({ ...data, workout_exercises: [] }), ...prev])
   }
 
-  const today    = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
-  const template = getTodayTemplate()
+  const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
 
   return (
     <div className="min-h-screen bg-zinc-950 max-w-md mx-auto">
@@ -69,6 +111,7 @@ export default function FitnessLog() {
           defaultExercises={template.exercises}
           defaultDuration={template.duration}
           defaultNotes={template.notes}
+          lastSession={lastSession}
         />
       </div>
 

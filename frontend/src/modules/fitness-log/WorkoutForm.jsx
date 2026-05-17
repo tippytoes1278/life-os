@@ -4,15 +4,22 @@ import { EXERCISES_BY_TYPE } from '../../data/workoutTemplates'
 
 const WORKOUT_TYPES = ['Push', 'Pull', 'Legs', 'Cardio', 'Rest']
 const TYPE_META = {
-  Push:   { emoji: '💪', sel: 'border-blue-500 bg-blue-500/10 text-blue-300'    },
+  Push:   { emoji: '💪', sel: 'border-blue-500 bg-blue-500/10 text-blue-300'       },
   Pull:   { emoji: '🏋️', sel: 'border-purple-500 bg-purple-500/10 text-purple-300' },
   Legs:   { emoji: '🦵', sel: 'border-orange-500 bg-orange-500/10 text-orange-300' },
-  Cardio: { emoji: '🏃', sel: 'border-rose-500 bg-rose-500/10 text-rose-300'    },
-  Rest:   { emoji: '😴', sel: 'border-zinc-500 bg-zinc-700 text-zinc-400'       },
+  Cardio: { emoji: '🏃', sel: 'border-rose-500 bg-rose-500/10 text-rose-300'       },
+  Rest:   { emoji: '😴', sel: 'border-zinc-500 bg-zinc-700 text-zinc-400'          },
 }
 const SHOWS_EXERCISES = ['Push', 'Pull', 'Legs']
 
-export default function WorkoutForm({ onSubmit, defaultType = '', defaultExercises = [], defaultDuration = '', defaultNotes = '' }) {
+export default function WorkoutForm({
+  onSubmit,
+  defaultType      = '',
+  defaultExercises = [],
+  defaultDuration  = '',
+  defaultNotes     = '',
+  lastSession      = {},
+}) {
   const [type, setType]           = useState(defaultType)
   const [duration, setDuration]   = useState(defaultDuration)
   const [weight, setWeight]       = useState('')
@@ -27,11 +34,19 @@ export default function WorkoutForm({ onSubmit, defaultType = '', defaultExercis
   function handleSubmit(e) {
     e.preventDefault()
     if (!isValid) return
-    onSubmit({ type, duration: isRest ? null : Number(duration),
-      weight: weight !== '' ? Number(weight) : null,
-      notes: notes.trim() || null,
-      exercises: exercises.filter((ex) => ex.name.trim()) })
+    onSubmit({
+      type,
+      duration:  isRest ? null : Number(duration),
+      weight:    weight !== '' ? Number(weight) : null,
+      notes:     notes.trim() || null,
+      exercises: exercises.filter((ex) => ex.name.trim()),
+    })
     setSubmitted(true)
+  }
+
+  function reset() {
+    setType(defaultType); setDuration(defaultDuration); setWeight('')
+    setNotes(defaultNotes); setExercises(defaultExercises); setSubmitted(false)
   }
 
   const inputCls = 'w-full bg-zinc-800 border-2 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 px-4 py-3 rounded-xl text-sm focus:outline-none focus:border-blue-500 transition-colors'
@@ -43,8 +58,9 @@ export default function WorkoutForm({ onSubmit, defaultType = '', defaultExercis
         <span className="text-5xl mb-4">{TYPE_META[type]?.emoji}</span>
         <h2 className="text-xl font-bold text-zinc-100">Workout logged!</h2>
         <p className="text-zinc-500 mt-1 text-sm">Keep the momentum going.</p>
-        <button onClick={() => { setType(defaultType); setDuration(defaultDuration); setWeight(''); setNotes(defaultNotes); setExercises(defaultExercises); setSubmitted(false) }}
-          className="mt-6 text-sm text-blue-400 underline underline-offset-2">Log another</button>
+        <button onClick={reset} className="mt-6 text-sm text-blue-400 underline underline-offset-2">
+          Log another
+        </button>
       </div>
     )
   }
@@ -68,7 +84,7 @@ export default function WorkoutForm({ onSubmit, defaultType = '', defaultExercis
         })}
       </div>
 
-      {showEx && <ExerciseList exercises={exercises} onChange={setExercises} />}
+      {showEx && <ExerciseList exercises={exercises} onChange={setExercises} lastSession={lastSession} />}
 
       {!isRest && (
         <div className="mb-4">

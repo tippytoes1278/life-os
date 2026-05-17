@@ -1,3 +1,4 @@
+const Anthropic = require('@anthropic-ai/sdk')
 const { supabase } = require('../lib/supabase')
 
 async function list(req, res) {
@@ -30,4 +31,33 @@ async function remove(req, res) {
   res.status(204).send()
 }
 
-module.exports = { list, create, remove }
+async function scanPhoto(req, res) {
+  const { image, media_type = 'image/jpeg' } = req.body
+  if (!image) return res.status(400).json({ error: 'No image provided' })
+
+  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+  try {
+    const message = await client.messages.create({
+      model:      'claude-sonnet-4-20250514',
+      max_tokens: 300,
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'image', source: { type: 'base64', media_type, data: image } },
+          {
+            type: 'text',
+            text: 'Analyze this food photo. Identify the meal, estimate calories and protein. Respond ONLY in JSON with no extra text: {"meal_name":"...","calories":0,"protein_g":0,"notes":"..."}',
+          },
+        ],
+      }],
+    })
+    const text  = message.content[0].text.trim()
+    const match = text.match(/\{[\s\S]*\}/)
+    if (!match) return res.status(500).json({ error: 'Could not parse AI response' })
+    res.json(JSON.parse(match[0]))
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+}
+
+module.exports = { list, create, remove, scanPhoto }

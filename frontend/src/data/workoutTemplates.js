@@ -1,4 +1,8 @@
-const ex = (name, sets, reps) => ({ name, sets: String(sets), reps: String(reps), weight_kg: '' })
+// Each exercise: { name, sets: [{ reps, weight_kg }, ...] }
+const ex = (name, setsCount, reps) => ({
+  name,
+  sets: Array.from({ length: setsCount }, () => ({ reps: String(reps), weight_kg: '' })),
+})
 
 const PUSH = [
   ex('Incline DB Press', 4, 8),
@@ -50,13 +54,13 @@ const WALK_NOTES = '45-60 min walk\nHip flexor stretch\nThoracic rotation stretc
 
 // Index matches getDay(): 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
 const WEEK = [
-  { label: 'Walk',        type: 'Cardio', duration: '60', notes: WALK_NOTES, exercises: [] },
-  { label: 'Push',        type: 'Push',   duration: '60', notes: '',          exercises: PUSH },
-  { label: 'Pull',        type: 'Pull',   duration: '60', notes: '',          exercises: PULL },
-  { label: 'Walk',        type: 'Cardio', duration: '60', notes: WALK_NOTES, exercises: [] },
-  { label: 'Legs + Core', type: 'Legs',   duration: '75', notes: '',          exercises: LEGS },
-  { label: 'HIIT',        type: 'Cardio', duration: '20', notes: '20 min HIIT cardio', exercises: [] },
-  { label: 'Arms + Delts', type: 'Push',  duration: '60', notes: '',          exercises: ARMS },
+  { label: 'Walk',         type: 'Cardio', duration: '60', notes: WALK_NOTES,             exercises: [] },
+  { label: 'Push',         type: 'Push',   duration: '60', notes: '',                     exercises: PUSH },
+  { label: 'Pull',         type: 'Pull',   duration: '60', notes: '',                     exercises: PULL },
+  { label: 'Walk',         type: 'Cardio', duration: '60', notes: WALK_NOTES,             exercises: [] },
+  { label: 'Legs + Core',  type: 'Legs',   duration: '75', notes: '',                     exercises: LEGS },
+  { label: 'HIIT',         type: 'Cardio', duration: '20', notes: '20 min HIIT cardio',   exercises: [] },
+  { label: 'Arms + Delts', type: 'Push',   duration: '60', notes: '',                     exercises: ARMS },
 ]
 
 export const EXERCISES_BY_TYPE = {

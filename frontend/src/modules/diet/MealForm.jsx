@@ -1,57 +1,104 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+
+const CameraIcon = () => (
+  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+    <path strokeLinecap="round" strokeLinejoin="round"
+      d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
+  </svg>
+)
 
 export default function MealForm({ onAdd }) {
   const [name, setName]         = useState('')
   const [protein, setProtein]   = useState('')
   const [calories, setCalories] = useState('')
+  const [scanning, setScanning] = useState(false)
+  const [scanError, setScanError] = useState('')
+  const fileRef = useRef(null)
+
+  async function handleScan(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setScanning(true); setScanError('')
+    const reader = new FileReader()
+    reader.onload = async (ev) => {
+      try {
+        const [meta, base64] = ev.target.result.split(',')
+        const media_type = meta.match(/data:(.*);base64/)?.[1] || 'image/jpeg'
+        const res = await fetch(`${API_URL}/api/diet/scan-photo`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: base64, media_type }),
+        })
+        if (!res.ok) throw new Error(`Error ${res.status}`)
+        const result = await res.json()
+        if (result.error) throw new Error(result.error)
+        setName(result.meal_name || '')
+        setProtein(String(result.protein_g  ?? ''))
+        setCalories(String(result.calories  ?? ''))
+      } catch (err) {
+        setScanError(err.message || 'Scan failed')
+      } finally {
+        setScanning(false)
+        if (fileRef.current) fileRef.current.value = ''
+      }
+    }
+    reader.readAsDataURL(file)
+  }
 
   function handleSubmit(e) {
     e.preventDefault()
     const p = Number(protein)
     if (!name.trim() || !p || p <= 0) return
-    onAdd({
-      meal_name: name.trim(),
-      protein_g: p,
-      calories:  calories !== '' ? Number(calories) : null,
-    })
-    setName(''); setProtein(''); setCalories('')
+    onAdd({ meal_name: name.trim(), protein_g: p, calories: calories !== '' ? Number(calories) : null })
+    setName(''); setProtein(''); setCalories(''); setScanError('')
   }
 
-  const isValid = name.trim() && Number(protein) > 0
+  const isValid  = name.trim() && Number(protein) > 0
   const inputCls = 'bg-zinc-800 border-2 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 rounded-xl text-sm focus:outline-none focus:border-green-500 transition-colors'
 
   return (
     <form onSubmit={handleSubmit} className="mx-4 bg-zinc-900 rounded-2xl border border-zinc-800 px-4 py-4 mb-4">
-      <p className="text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-3">Log a Meal</p>
-      <input
-        type="text" value={name} onChange={(e) => setName(e.target.value)}
-        placeholder="Meal name…"
-        className={`w-full px-4 py-3 mb-2 ${inputCls}`}
-      />
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-xs font-semibold text-zinc-400 uppercase tracking-widest">Log a Meal</p>
+        <button type="button" onClick={() => fileRef.current?.click()}
+          disabled={scanning}
+          className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${
+            scanning ? 'text-zinc-600 bg-zinc-800' : 'text-green-400 bg-zinc-800 hover:bg-zinc-700'
+          }`}>
+          <CameraIcon />
+          {scanning ? 'Scanning…' : 'Scan Photo'}
+        </button>
+        <input ref={fileRef} type="file" accept="image/*" capture="environment"
+          className="hidden" onChange={handleScan} />
+      </div>
+
+      {scanError && <p className="text-xs text-red-400 mb-2">{scanError}</p>}
+
+      <input type="text" value={name} onChange={(e) => setName(e.target.value)}
+        placeholder="Meal name…" className={`w-full px-4 py-3 mb-2 ${inputCls}`} />
+
       <div className="flex gap-2 mb-3">
         <div className="relative flex-1">
-          <input
-            type="number" min="0" max="300" step="0.5" value={protein}
+          <input type="number" min="0" max="300" step="0.5" value={protein}
             onChange={(e) => setProtein(e.target.value)} placeholder="Protein"
-            className={`w-full px-3 pr-6 py-3 text-center ${inputCls}`}
-          />
+            className={`w-full px-3 pr-6 py-3 text-center ${inputCls}`} />
           <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-zinc-500 pointer-events-none">g</span>
         </div>
         <div className="relative flex-1">
-          <input
-            type="number" min="0" max="2000" value={calories}
+          <input type="number" min="0" max="2000" value={calories}
             onChange={(e) => setCalories(e.target.value)} placeholder="Calories"
-            className={`w-full px-3 pr-10 py-3 text-center ${inputCls}`}
-          />
+            className={`w-full px-3 pr-10 py-3 text-center ${inputCls}`} />
           <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-zinc-500 pointer-events-none">kcal</span>
         </div>
       </div>
-      <button
-        type="submit" disabled={!isValid}
+
+      <button type="submit" disabled={!isValid}
         className={`w-full py-3 rounded-xl font-semibold text-sm transition-all duration-150 ${
           isValid ? 'bg-green-600 text-white hover:bg-green-500 active:scale-95' : 'bg-zinc-800 text-zinc-600 cursor-not-allowed'
-        }`}
-      >
+        }`}>
         Add Meal
       </button>
     </form>

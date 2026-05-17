@@ -1,7 +1,8 @@
 const express = require('express')
-const { generate } = require('../controllers/reviewController')
+const { generate, sendWhatsApp } = require('../controllers/reviewController')
 
 const router = express.Router()
-router.post('/generate', generate)
+router.post('/generate',  generate)
+router.post('/whatsapp',  sendWhatsApp)
 
 module.exports = router
