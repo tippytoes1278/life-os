@@ -59,6 +59,14 @@ const WEEK = [
   { label: 'Arms + Delts', type: 'Push',  duration: '60', notes: '',          exercises: ARMS },
 ]
 
+export const EXERCISES_BY_TYPE = {
+  Push:   PUSH,
+  Pull:   PULL,
+  Legs:   LEGS,
+  Cardio: [],
+  Rest:   [],
+}
+
 export function getTodayTemplate() {
   return WEEK[new Date().getDay()]
 }

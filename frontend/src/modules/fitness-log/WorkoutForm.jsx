@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import ExerciseList from './ExerciseList'
+import { EXERCISES_BY_TYPE } from '../../data/workoutTemplates'
 
 const WORKOUT_TYPES = ['Push', 'Pull', 'Legs', 'Cardio', 'Rest']
 const TYPE_META = {
@@ -56,7 +57,7 @@ export default function WorkoutForm({ onSubmit, defaultType = '', defaultExercis
           const selected = type === t
           return (
             <button key={t} type="button"
-              onClick={() => { setType(t); setExercises(t === defaultType ? defaultExercises : []) }}
+              onClick={() => { setType(t); setExercises(EXERCISES_BY_TYPE[t] ?? []) }}
               className={`flex flex-col items-center py-3 rounded-xl border-2 transition-all duration-150 ${
                 selected ? TYPE_META[t].sel + ' scale-105' : 'border-zinc-700 bg-zinc-800 hover:border-zinc-600'
               }`}>
