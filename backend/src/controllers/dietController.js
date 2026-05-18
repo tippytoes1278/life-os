@@ -38,7 +38,7 @@ async function scanPhoto(req, res) {
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
   try {
     const message = await client.messages.create({
-      model:      'claude-sonnet-4-5-20251001',
+      model:      'model: 'claude-haiku-4-5-20251001',
       max_tokens: 300,
       messages: [{
         role: 'user',
