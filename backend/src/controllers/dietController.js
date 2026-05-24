@@ -11,7 +11,7 @@ async function list(req, res) {
 }
 
 async function create(req, res) {
-  const { meal_name, protein_g, calories, carbs_g, fat_g } = req.body
+  const { meal_name, protein_g, calories, carbs_g, fat_g, category } = req.body
   if (!meal_name?.trim()) return res.status(400).json({ error: 'meal_name is required' })
   if (protein_g == null || Number(protein_g) < 0) return res.status(400).json({ error: 'protein_g must be >= 0' })
 
@@ -23,6 +23,7 @@ async function create(req, res) {
       calories:  calories  != null ? Number(calories)  : null,
       carbs_g:   carbs_g   != null ? Number(carbs_g)   : null,
       fat_g:     fat_g     != null ? Number(fat_g)     : null,
+      category:  category  || null,
     })
     .select()
     .single()

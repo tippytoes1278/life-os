@@ -1,152 +1,40 @@
-const PROTEIN_TARGET = 150
+// MacroSummary — 4 progress bars: calories, protein, carbs, fat
 
-function formatTime(iso) {
-  return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-}
-
-function fmt(n) {
-  if (n == null || n === '') return null
-  const v = Number(n)
-  return isNaN(v) ? null : v % 1 === 0 ? v : v.toFixed(1)
-}
-
-function ProgressBar({ value, target, color }) {
-  const pct     = Math.min((value / target) * 100, 100)
-  const reached = value >= target
+function MacroBar({ label, value, target, color, unit }) {
+  const pct = Math.min((value / target) * 100, 100)
+  const hit = value >= target
+  const display = value % 1 === 0 ? value : value.toFixed(1)
   return (
-    <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
-      <div
-        className={`h-full rounded-full transition-all duration-700 ${reached ? 'bg-amber-400' : color}`}
-        style={{ width: `${pct}%` }}
-      />
-    </div>
-  )
-}
-
-function MacroBadge({ value, unit, color }) {
-  if (value == null) return null
-  return (
-    <span className={`text-xs font-semibold tabular-nums ${color}`}>
-      {value}{unit}
-    </span>
-  )
-}
-
-function MealRow({ meal, onDelete }) {
-  const protein  = fmt(meal.protein_g)
-  const cals     = fmt(meal.calories)
-  const carbs    = fmt(meal.carbs_g)
-  const fat      = fmt(meal.fat_g)
-  const hasMacros = carbs != null || fat != null
-
-  return (
-    <div className="flex items-start gap-3 py-3 border-b border-zinc-800 last:border-0">
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-zinc-200 truncate">{meal.meal_name}</p>
-        {meal.logged_at && (
-          <p className="text-xs text-zinc-600 mt-0.5">{formatTime(meal.logged_at)}</p>
-        )}
-        {/* Carbs + fat on a second line when present */}
-        {hasMacros && (
-          <div className="flex gap-2 mt-1">
-            {carbs != null && <MacroBadge value={carbs} unit="g carbs" color="text-blue-400" />}
-            {fat   != null && <MacroBadge value={fat}   unit="g fat"   color="text-yellow-400" />}
-          </div>
-        )}
+    <div>
+      <div className="flex justify-between items-baseline mb-1">
+        <span className="text-xs font-semibold text-zinc-500 uppercase tracking-widest">{label}</span>
+        <span className={`text-xs font-bold tabular-nums ${hit ? 'text-amber-400' : 'text-zinc-300'}`}>
+          {display}{unit}
+          <span className="text-zinc-600 font-normal"> / {target}{unit}</span>
+        </span>
       </div>
-      <div className="text-right shrink-0">
-        {protein != null && <p className="text-sm font-bold text-green-400 tabular-nums">{protein}g</p>}
-        {cals    != null && <p className="text-xs text-zinc-500 tabular-nums">{cals} kcal</p>}
+      <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all duration-700 ${hit ? 'bg-amber-400' : color}`}
+          style={{ width: `${pct}%` }}
+        />
       </div>
-      <button onClick={() => onDelete(meal.id)}
-        className="text-zinc-700 hover:text-red-500 transition-colors p-1 shrink-0 mt-0.5" aria-label="Remove">
-        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
     </div>
   )
 }
 
 export default function DailyProtein({
-  meals, onDelete,
-  proteinTotal, calorieTotal, calorieTarget,
-  carbsTotal, fatTotal,
+  calorieTotal, calorieTarget,
+  proteinTotal, proteinTarget,
+  carbsTotal,   carbsTarget,
+  fatTotal,     fatTarget,
 }) {
-  const calReached  = calorieTotal >= calorieTarget
-  const protReached = proteinTotal >= PROTEIN_TARGET
-
   return (
-    <div className="px-4 space-y-3 pb-4">
-      <div className="bg-zinc-900 rounded-2xl border border-zinc-800 p-5 space-y-4">
-
-        {/* Calories */}
-        <div>
-          <div className="flex items-end justify-between mb-2">
-            <div>
-              <p className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-1">Calories</p>
-              <p className="text-3xl font-bold text-zinc-50 tabular-nums leading-none">
-                {calorieTotal}
-                <span className="text-lg font-normal text-zinc-500 ml-1">kcal</span>
-              </p>
-            </div>
-            <p className={`text-sm font-semibold text-right ${calReached ? 'text-amber-400' : 'text-orange-400'}`}>
-              {calReached ? '🎯 Hit!' : `${calorieTarget - calorieTotal} left`}
-              <span className="block text-xs font-normal text-zinc-600">{calorieTarget} target</span>
-            </p>
-          </div>
-          <ProgressBar value={calorieTotal} target={calorieTarget} color="bg-orange-500" />
-        </div>
-
-        <div className="border-t border-zinc-800" />
-
-        {/* Protein */}
-        <div>
-          <div className="flex items-end justify-between mb-2">
-            <div>
-              <p className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-1">Protein</p>
-              <p className="text-3xl font-bold text-zinc-50 tabular-nums leading-none">
-                {proteinTotal % 1 === 0 ? proteinTotal : proteinTotal.toFixed(1)}
-                <span className="text-lg font-normal text-zinc-500 ml-1">g</span>
-              </p>
-            </div>
-            <p className={`text-sm font-semibold text-right ${protReached ? 'text-amber-400' : 'text-green-400'}`}>
-              {protReached ? '🎯 Hit!' : `${PROTEIN_TARGET - proteinTotal}g left`}
-              <span className="block text-xs font-normal text-zinc-600">{PROTEIN_TARGET}g target</span>
-            </p>
-          </div>
-          <ProgressBar value={proteinTotal} target={PROTEIN_TARGET} color="bg-green-500" />
-        </div>
-
-        {/* Carbs + Fat totals — only when any meals have these logged */}
-        {(carbsTotal > 0 || fatTotal > 0) && (
-          <>
-            <div className="border-t border-zinc-800" />
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <p className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-1">Carbs</p>
-                <p className="text-xl font-bold text-blue-400 tabular-nums">
-                  {carbsTotal % 1 === 0 ? carbsTotal : carbsTotal.toFixed(1)}
-                  <span className="text-sm font-normal text-zinc-500 ml-1">g</span>
-                </p>
-              </div>
-              <div className="flex-1">
-                <p className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-1">Fat</p>
-                <p className="text-xl font-bold text-yellow-400 tabular-nums">
-                  {fatTotal % 1 === 0 ? fatTotal : fatTotal.toFixed(1)}
-                  <span className="text-sm font-normal text-zinc-500 ml-1">g</span>
-                </p>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
-
-      {meals.length > 0 && (
-        <div className="bg-zinc-900 rounded-2xl border border-zinc-800 px-4 py-1">
-          {meals.map((meal) => <MealRow key={meal.id} meal={meal} onDelete={onDelete} />)}
-        </div>
-      )}
+    <div className="mx-4 bg-zinc-900 rounded-2xl border border-zinc-800 p-5 space-y-4">
+      <MacroBar label="Calories" value={calorieTotal} target={calorieTarget} color="bg-orange-500" unit=" kcal" />
+      <MacroBar label="Protein"  value={proteinTotal} target={proteinTarget} color="bg-green-500"  unit="g" />
+      <MacroBar label="Carbs"    value={carbsTotal}   target={carbsTarget}   color="bg-blue-500"   unit="g" />
+      <MacroBar label="Fat"      value={fatTotal}     target={fatTarget}     color="bg-yellow-500" unit="g" />
     </div>
   )
 }
