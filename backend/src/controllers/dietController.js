@@ -2,10 +2,17 @@ const Anthropic = require('@anthropic-ai/sdk')
 const { supabase } = require('../lib/supabase')
 
 async function list(req, res) {
+  // Default to today in UTC; optionally pass ?date=YYYY-MM-DD
+  const date  = req.query.date || new Date().toISOString().split('T')[0]
+  const start = `${date}T00:00:00.000Z`
+  const end   = `${date}T23:59:59.999Z`
+
   const { data, error } = await supabase
     .from('diet_logs')
     .select('*')
-    .order('logged_at', { ascending: false })
+    .gte('logged_at', start)
+    .lte('logged_at', end)
+    .order('logged_at', { ascending: true })
   if (error) return res.status(500).json({ error: error.message })
   res.json(data)
 }
@@ -53,7 +60,7 @@ async function scanPhoto(req, res) {
           { type: 'image', source: { type: 'base64', media_type, data: image } },
           {
             type: 'text',
-            text: 'Analyze this food photo. Identify the meal and estimate all macros. Respond ONLY in JSON with no extra text: {"meal_name":"...","calories":0,"protein_g":0,"carbs_g":0,"fat_g":0}',
+            text: 'Analyze this food photo. Identify the meal and estimate all macros. Respond ONLY with a single JSON object, no markdown or extra text: {"meal_name":"...","calories":0,"protein_g":0,"carbs_g":0,"fat_g":0}',
           },
         ],
       }],

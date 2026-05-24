@@ -4,6 +4,8 @@ import DailyProtein from '../modules/diet/DailyProtein'
 import MealsByCategory from '../modules/diet/MealsByCategory'
 import MealForm from '../modules/diet/MealForm'
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+
 const LIGHT_TYPES = new Set(['Cardio', 'Rest'])
 
 const TARGETS = {
@@ -30,27 +32,24 @@ export default function Diet() {
   useEffect(() => {
     const { start, end } = todayBounds()
     Promise.all([
-      supabase.from('diet_logs').select('*').gte('logged_at', start).lt('logged_at', end).order('logged_at'),
+      fetch(`${API_URL}/api/diet`).then((r) => r.json()),
       supabase.from('fitness_logs').select('type').gte('logged_at', start).lt('logged_at', end).limit(1).maybeSingle(),
-    ]).then(([{ data: dietData }, { data: wod }]) => {
-      setMeals(dietData || [])
+    ]).then(([dietData, { data: wod }]) => {
+      setMeals(Array.isArray(dietData) ? dietData : [])
       setIsLight(wod && LIGHT_TYPES.has(wod.type))
       setLoading(false)
     })
   }, [])
 
-  async function handleAdd(meal) {
-    const tempId = `temp-${Date.now()}`
-    setMeals((prev) => [...prev, { ...meal, id: tempId, logged_at: new Date().toISOString() }])
+  function handleAdd(meal) {
+    // MealForm has already POSTed and returns the persisted row
+    setMeals((prev) => [...prev, meal])
     setShowForm(false)
-    const { data, error } = await supabase.from('diet_logs').insert(meal).select().single()
-    if (!error) setMeals((prev) => prev.map((m) => m.id === tempId ? data : m))
-    else        setMeals((prev) => prev.filter((m) => m.id !== tempId))
   }
 
   async function handleDelete(id) {
     setMeals((prev) => prev.filter((m) => m.id !== id))
-    await supabase.from('diet_logs').delete().eq('id', id)
+    await fetch(`${API_URL}/api/diet/${id}`, { method: 'DELETE' })
   }
 
   const targets = isLight ? TARGETS.light : TARGETS.training
@@ -74,7 +73,6 @@ export default function Diet() {
         </p>
       </div>
 
-      {/* Macro summary */}
       {loading
         ? <p className="text-center text-sm text-zinc-600 py-6">Loading…</p>
         : (
