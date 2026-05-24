@@ -1,3 +1,4 @@
+// checkin controller: morning + evening log_types
 const { supabase } = require('../lib/supabase')
 
 function todayRange() {
