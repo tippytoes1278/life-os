@@ -1,4 +1,14 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+
+const DRAFT_KEY = 'draft_morning_checkin'
+function loadDraft() {
+  try {
+    const s = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null')
+    if (!s) return null
+    const today = new Date().toISOString().split('T')[0]
+    return s.date === today ? s : null // discard yesterday's draft
+  } catch { return null }
+}
 
 const MOOD_E   = ['😞', '😕', '😐', '🙂', '😄']
 const ENERGY_E = ['🪫', '😴', '⚡', '🔥', '🚀']
@@ -53,10 +63,18 @@ function TodosInput({ todos, onChange }) {
 }
 
 export default function MorningForm({ onSubmit, alreadyDone }) {
-  const [mood, setMood]     = useState(null)
-  const [energy, setEnergy] = useState(null)
-  const [todos, setTodos]   = useState(['', '', ''])
-  const [weight, setWeight] = useState('')
+  const draft = !alreadyDone ? loadDraft() : null
+  const [mood, setMood]     = useState(draft?.mood   ?? null)
+  const [energy, setEnergy] = useState(draft?.energy ?? null)
+  const [todos, setTodos]   = useState(draft?.todos  ?? ['', '', ''])
+  const [weight, setWeight] = useState(draft?.weight ?? '')
+
+  // Persist draft to localStorage as user types
+  useEffect(() => {
+    if (alreadyDone) return
+    const today = new Date().toISOString().split('T')[0]
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({ date: today, mood, energy, todos, weight }))
+  }, [mood, energy, todos, weight, alreadyDone])
 
   if (alreadyDone) {
     return (
@@ -81,6 +99,7 @@ export default function MorningForm({ onSubmit, alreadyDone }) {
   function handleSubmit(e) {
     e.preventDefault()
     if (!isValid) return
+    localStorage.removeItem(DRAFT_KEY)
     onSubmit({ mood, energy, todos: todos.filter((t) => t.trim()), weight_kg: weight || null })
   }
 

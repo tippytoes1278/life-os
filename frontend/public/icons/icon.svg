@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#09090b"/>
+  <rect width="512" height="512" rx="96" fill="#7c3aed" opacity="0.15"/>
+  <!-- Outer ring -->
+  <circle cx="256" cy="256" r="180" fill="none" stroke="#7c3aed" stroke-width="16" opacity="0.4"/>
+  <!-- Letter L -->
+  <text x="256" y="320" font-family="system-ui, -apple-system, sans-serif" font-size="220" font-weight="800"
+        fill="#7c3aed" text-anchor="middle" dominant-baseline="auto">L</text>
+</svg>

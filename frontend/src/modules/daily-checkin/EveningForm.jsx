@@ -1,4 +1,14 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+
+const DRAFT_KEY = 'draft_evening_checkin'
+function loadDraft() {
+  try {
+    const s = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null')
+    if (!s) return null
+    const today = new Date().toISOString().split('T')[0]
+    return s.date === today ? s : null
+  } catch { return null }
+}
 
 const label = 'text-xs font-semibold text-zinc-400 uppercase tracking-widest block mb-2'
 const inputCls = 'w-full bg-zinc-800 border-2 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 px-4 py-3 rounded-xl text-sm focus:outline-none focus:border-violet-500 transition-colors'
@@ -69,10 +79,18 @@ function WinsInput({ wins, onChange }) {
 }
 
 export default function EveningForm({ morningTodos, onSubmit, alreadyDone }) {
-  const [checked, setChecked]       = useState([])
-  const [wins, setWins]             = useState(['', '', ''])
-  const [rating, setRating]         = useState(null)
-  const [improvement, setImprovement] = useState('')
+  const draft = !alreadyDone ? loadDraft() : null
+  const [checked, setChecked]         = useState(draft?.checked     ?? [])
+  const [wins, setWins]               = useState(draft?.wins        ?? ['', '', ''])
+  const [rating, setRating]           = useState(draft?.rating      ?? null)
+  const [improvement, setImprovement] = useState(draft?.improvement ?? '')
+
+  // Persist draft as user types
+  useEffect(() => {
+    if (alreadyDone) return
+    const today = new Date().toISOString().split('T')[0]
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({ date: today, checked, wins, rating, improvement }))
+  }, [checked, wins, rating, improvement, alreadyDone])
 
   if (alreadyDone) {
     const ratingColor = alreadyDone.day_rating <= 3 ? 'text-red-400' : alreadyDone.day_rating <= 6 ? 'text-amber-400' : 'text-green-400'
@@ -99,6 +117,7 @@ export default function EveningForm({ morningTodos, onSubmit, alreadyDone }) {
   function handleSubmit(e) {
     e.preventDefault()
     if (!isValid) return
+    localStorage.removeItem(DRAFT_KEY)
     onSubmit({ todos: checked, wins: wins.filter((w) => w.trim()), day_rating: rating, improvement: improvement.trim() || null })
   }
 

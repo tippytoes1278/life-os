@@ -1,4 +1,9 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
+
+const DRAFT_KEY = 'draft_meal_form'
+function loadDraft() {
+  try { return JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null') } catch { return null }
+}
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
 
@@ -11,12 +16,22 @@ const CameraIcon = () => (
 )
 
 export default function MealForm({ onAdd }) {
-  const [name, setName]         = useState('')
-  const [protein, setProtein]   = useState('')
-  const [calories, setCalories] = useState('')
-  const [scanning, setScanning] = useState(false)
+  const draft = loadDraft()
+  const [name, setName]           = useState(draft?.name     ?? '')
+  const [protein, setProtein]     = useState(draft?.protein  ?? '')
+  const [calories, setCalories]   = useState(draft?.calories ?? '')
+  const [scanning, setScanning]   = useState(false)
   const [scanError, setScanError] = useState('')
   const fileRef = useRef(null)
+
+  // Persist draft as user types
+  useEffect(() => {
+    if (name || protein || calories) {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({ name, protein, calories }))
+    } else {
+      localStorage.removeItem(DRAFT_KEY)
+    }
+  }, [name, protein, calories])
 
   async function handleScan(e) {
     const file = e.target.files?.[0]
@@ -52,6 +67,7 @@ export default function MealForm({ onAdd }) {
     e.preventDefault()
     const p = Number(protein)
     if (!name.trim() || !p || p <= 0) return
+    localStorage.removeItem(DRAFT_KEY)
     onAdd({ meal_name: name.trim(), protein_g: p, calories: calories !== '' ? Number(calories) : null })
     setName(''); setProtein(''); setCalories(''); setScanError('')
   }
