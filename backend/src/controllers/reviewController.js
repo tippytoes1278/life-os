@@ -134,7 +134,7 @@ async function generateReviewText() {
   const { mornings, evenings, habits, completions, fitness, weekLabel } = await fetchWeekData()
   const prompt  = buildPrompt(mornings, evenings, habits, completions, fitness, weekLabel)
   const message = await anthropic.messages.create({
-    model:      'claude-sonnet-4-5-20251001',
+    model:      'claude-3-5-sonnet-20241022',
     max_tokens: 600,
     system:     "You are a warm, insightful personal coach writing a weekly review based on someone's health and productivity data.",
     messages:   [{ role: 'user', content: prompt }],
