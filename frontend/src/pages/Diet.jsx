@@ -48,10 +48,14 @@ export default function Diet() {
     await supabase.from('diet_logs').delete().eq('id', id)
   }
 
-  const customProtein  = meals.reduce((s, m) => s + Number(m.protein_g  || 0), 0)
-  const customCalories = meals.reduce((s, m) => s + Number(m.calories   || 0), 0)
+  const customProtein  = meals.reduce((s, m) => s + Number(m.protein_g || 0), 0)
+  const customCalories = meals.reduce((s, m) => s + Number(m.calories  || 0), 0)
+  const customCarbs    = meals.reduce((s, m) => s + Number(m.carbs_g   || 0), 0)
+  const customFat      = meals.reduce((s, m) => s + Number(m.fat_g     || 0), 0)
   const proteinTotal   = templateTotals.protein  + customProtein
   const calorieTotal   = templateTotals.calories + customCalories
+  const carbsTotal     = customCarbs   // template plan doesn't track carbs/fat
+  const fatTotal       = customFat
   const isLight        = calorieTarget === CAL_LIGHT
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
 
@@ -74,6 +78,8 @@ export default function Diet() {
               proteinTotal={proteinTotal}
               calorieTotal={calorieTotal}
               calorieTarget={calorieTarget}
+              carbsTotal={carbsTotal}
+              fatTotal={fatTotal}
             />
         }
       </div>

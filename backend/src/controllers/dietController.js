@@ -11,13 +11,19 @@ async function list(req, res) {
 }
 
 async function create(req, res) {
-  const { meal_name, protein_g } = req.body
+  const { meal_name, protein_g, calories, carbs_g, fat_g } = req.body
   if (!meal_name?.trim()) return res.status(400).json({ error: 'meal_name is required' })
   if (protein_g == null || Number(protein_g) < 0) return res.status(400).json({ error: 'protein_g must be >= 0' })
 
   const { data, error } = await supabase
     .from('diet_logs')
-    .insert({ meal_name: meal_name.trim(), protein_g: Number(protein_g) })
+    .insert({
+      meal_name: meal_name.trim(),
+      protein_g: Number(protein_g),
+      calories:  calories  != null ? Number(calories)  : null,
+      carbs_g:   carbs_g   != null ? Number(carbs_g)   : null,
+      fat_g:     fat_g     != null ? Number(fat_g)     : null,
+    })
     .select()
     .single()
   if (error) return res.status(500).json({ error: error.message })
@@ -46,7 +52,7 @@ async function scanPhoto(req, res) {
           { type: 'image', source: { type: 'base64', media_type, data: image } },
           {
             type: 'text',
-            text: 'Analyze this food photo. Identify the meal, estimate calories and protein. Respond ONLY in JSON with no extra text: {"meal_name":"...","calories":0,"protein_g":0,"notes":"..."}',
+            text: 'Analyze this food photo. Identify the meal and estimate all macros. Respond ONLY in JSON with no extra text: {"meal_name":"...","calories":0,"protein_g":0,"carbs_g":0,"fat_g":0}',
           },
         ],
       }],

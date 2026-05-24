@@ -11,21 +11,42 @@ const CameraIcon = () => (
   </svg>
 )
 
+// Shared style for all macro inputs
+const inputCls = 'bg-zinc-800 border-2 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 rounded-xl text-sm focus:outline-none focus:border-green-500 transition-colors'
+
+function MacroInput({ value, onChange, placeholder, max, unit }) {
+  return (
+    <div className="relative flex-1">
+      <input
+        type="number" min="0" max={max} step="0.5" value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className={`w-full px-3 ${unit.length > 2 ? 'pr-10' : 'pr-7'} py-3 text-center ${inputCls}`}
+      />
+      <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-zinc-500 pointer-events-none">
+        {unit}
+      </span>
+    </div>
+  )
+}
+
 export default function MealForm({ onAdd }) {
   const { draft, save, clear } = useDraftPersistence('draft_meal', {
-    name: '', protein: '', calories: '',
+    name: '', protein: '', calories: '', carbs: '', fat: '',
   })
 
-  const [name, setName]           = useState(draft.name)
-  const [protein, setProtein]     = useState(draft.protein)
-  const [calories, setCalories]   = useState(draft.calories)
-  const [scanning, setScanning]   = useState(false)
+  const [name, setName]         = useState(draft.name)
+  const [protein, setProtein]   = useState(draft.protein)
+  const [calories, setCalories] = useState(draft.calories)
+  const [carbs, setCarbs]       = useState(draft.carbs)
+  const [fat, setFat]           = useState(draft.fat)
+  const [scanning, setScanning] = useState(false)
   const [scanError, setScanError] = useState('')
   const fileRef = useRef(null)
 
   useEffect(() => {
-    save({ name, protein, calories })
-  }, [name, protein, calories]) // eslint-disable-line react-hooks/exhaustive-deps
+    save({ name, protein, calories, carbs, fat })
+  }, [name, protein, calories, carbs, fat]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleScan(e) {
     const file = e.target.files?.[0]
@@ -44,9 +65,11 @@ export default function MealForm({ onAdd }) {
         if (!res.ok) throw new Error(`Error ${res.status}`)
         const result = await res.json()
         if (result.error) throw new Error(result.error)
-        setName(result.meal_name || '')
-        setProtein(String(result.protein_g  ?? ''))
-        setCalories(String(result.calories  ?? ''))
+        setName(result.meal_name   || '')
+        setProtein(String(result.protein_g ?? ''))
+        setCalories(String(result.calories ?? ''))
+        setCarbs(String(result.carbs_g     ?? ''))
+        setFat(String(result.fat_g         ?? ''))
       } catch (err) {
         setScanError(err.message || 'Scan failed')
       } finally {
@@ -62,19 +85,24 @@ export default function MealForm({ onAdd }) {
     const p = Number(protein)
     if (!name.trim() || !p || p <= 0) return
     clear()
-    onAdd({ meal_name: name.trim(), protein_g: p, calories: calories !== '' ? Number(calories) : null })
-    setName(''); setProtein(''); setCalories(''); setScanError('')
+    onAdd({
+      meal_name: name.trim(),
+      protein_g: p,
+      calories:  calories !== '' ? Number(calories) : null,
+      carbs_g:   carbs    !== '' ? Number(carbs)    : null,
+      fat_g:     fat      !== '' ? Number(fat)      : null,
+    })
+    setName(''); setProtein(''); setCalories(''); setCarbs(''); setFat(''); setScanError('')
   }
 
-  const isValid  = name.trim() && Number(protein) > 0
-  const inputCls = 'bg-zinc-800 border-2 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 rounded-xl text-sm focus:outline-none focus:border-green-500 transition-colors'
+  const isValid = name.trim() && Number(protein) > 0
 
   return (
     <form onSubmit={handleSubmit} className="mx-4 bg-zinc-900 rounded-2xl border border-zinc-800 px-4 py-4 mb-4">
+      {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <p className="text-xs font-semibold text-zinc-400 uppercase tracking-widest">Log a Meal</p>
-        <button type="button" onClick={() => fileRef.current?.click()}
-          disabled={scanning}
+        <button type="button" onClick={() => fileRef.current?.click()} disabled={scanning}
           className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${
             scanning ? 'text-zinc-600 bg-zinc-800' : 'text-green-400 bg-zinc-800 hover:bg-zinc-700'
           }`}>
@@ -87,22 +115,20 @@ export default function MealForm({ onAdd }) {
 
       {scanError && <p className="text-xs text-red-400 mb-2">{scanError}</p>}
 
+      {/* Meal name */}
       <input type="text" value={name} onChange={(e) => setName(e.target.value)}
         placeholder="Meal name…" className={`w-full px-4 py-3 mb-2 ${inputCls}`} />
 
+      {/* Row 1: protein + calories */}
+      <div className="flex gap-2 mb-2">
+        <MacroInput value={protein}  onChange={setProtein}  placeholder="Protein"   max={300}  unit="g"    />
+        <MacroInput value={calories} onChange={setCalories} placeholder="Calories"  max={2000} unit="kcal" />
+      </div>
+
+      {/* Row 2: carbs + fat */}
       <div className="flex gap-2 mb-3">
-        <div className="relative flex-1">
-          <input type="number" min="0" max="300" step="0.5" value={protein}
-            onChange={(e) => setProtein(e.target.value)} placeholder="Protein"
-            className={`w-full px-3 pr-6 py-3 text-center ${inputCls}`} />
-          <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-zinc-500 pointer-events-none">g</span>
-        </div>
-        <div className="relative flex-1">
-          <input type="number" min="0" max="2000" value={calories}
-            onChange={(e) => setCalories(e.target.value)} placeholder="Calories"
-            className={`w-full px-3 pr-10 py-3 text-center ${inputCls}`} />
-          <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-zinc-500 pointer-events-none">kcal</span>
-        </div>
+        <MacroInput value={carbs} onChange={setCarbs} placeholder="Carbs" max={500} unit="g" />
+        <MacroInput value={fat}   onChange={setFat}   placeholder="Fat"   max={200} unit="g" />
       </div>
 
       <button type="submit" disabled={!isValid}
