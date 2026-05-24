@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import ExerciseList from './ExerciseList'
 import { EXERCISES_BY_TYPE } from '../../data/workoutTemplates'
+import { useDraftPersistence } from '../../hooks/useDraftPersistence'
 
 const WORKOUT_TYPES = ['Push', 'Pull', 'Legs', 'Cardio', 'Rest']
 const TYPE_META = {
@@ -20,12 +21,25 @@ export default function WorkoutForm({
   defaultNotes     = '',
   lastSession      = {},
 }) {
-  const [type, setType]           = useState(defaultType)
-  const [duration, setDuration]   = useState(defaultDuration)
-  const [weight, setWeight]       = useState('')
-  const [notes, setNotes]         = useState(defaultNotes)
-  const [exercises, setExercises] = useState(defaultExercises)
+  const { draft, save, clear } = useDraftPersistence('draft_workout', {
+    type:      defaultType,
+    duration:  defaultDuration,
+    weight:    '',
+    notes:     defaultNotes,
+    exercises: defaultExercises,
+  })
+
+  const [type, setType]           = useState(draft.type)
+  const [duration, setDuration]   = useState(draft.duration)
+  const [weight, setWeight]       = useState(draft.weight)
+  const [notes, setNotes]         = useState(draft.notes)
+  const [exercises, setExercises] = useState(draft.exercises)
   const [submitted, setSubmitted] = useState(false)
+
+  useEffect(() => {
+    if (submitted) return
+    save({ type, duration, weight, notes, exercises })
+  }, [type, duration, weight, notes, exercises, submitted]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const isRest  = type === 'Rest'
   const showEx  = SHOWS_EXERCISES.includes(type)
@@ -34,6 +48,7 @@ export default function WorkoutForm({
   function handleSubmit(e) {
     e.preventDefault()
     if (!isValid) return
+    clear()
     onSubmit({
       type,
       duration:  isRest ? null : Number(duration),
@@ -45,6 +60,7 @@ export default function WorkoutForm({
   }
 
   function reset() {
+    clear()
     setType(defaultType); setDuration(defaultDuration); setWeight('')
     setNotes(defaultNotes); setExercises(defaultExercises); setSubmitted(false)
   }
