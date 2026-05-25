@@ -20,6 +20,7 @@ export default function WorkoutForm({
   defaultDuration  = '',
   defaultNotes     = '',
   lastSession      = {},
+  exerciseHistory  = {},
 }) {
   const { draft, save, clear } = useDraftPersistence('draft_workout', {
     type:      defaultType,
@@ -100,7 +101,14 @@ export default function WorkoutForm({
         })}
       </div>
 
-      {showEx && <ExerciseList exercises={exercises} onChange={setExercises} lastSession={lastSession} />}
+      {showEx && (
+        <ExerciseList
+          exercises={exercises}
+          onChange={setExercises}
+          lastSession={lastSession}
+          exerciseHistory={exerciseHistory}
+        />
+      )}
 
       {!isRest && (
         <div className="mb-4">

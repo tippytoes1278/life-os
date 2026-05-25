@@ -4,6 +4,8 @@ import WorkoutForm from '../modules/fitness-log/WorkoutForm'
 import WorkoutHistory from '../modules/fitness-log/WorkoutHistory'
 import { getTodayTemplate } from '../data/workoutTemplates'
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+
 function toEntryShape(row) {
   return {
     ...row,
@@ -27,9 +29,10 @@ function buildLastSession(rows) {
 }
 
 export default function FitnessLog() {
-  const [entries, setEntries]       = useState([])
-  const [loading, setLoading]       = useState(true)
-  const [lastSession, setLastSession] = useState({})
+  const [entries, setEntries]               = useState([])
+  const [loading, setLoading]               = useState(true)
+  const [lastSession, setLastSession]       = useState({})
+  const [exerciseHistory, setExerciseHistory] = useState({})
   const template = getTodayTemplate()
 
   useEffect(() => {
@@ -43,9 +46,11 @@ export default function FitnessLog() {
             .order('created_at', { ascending: false })
             .limit(500)
         : Promise.resolve({ data: [] }),
-    ]).then(([logsRes, setsRes]) => {
+      fetch(`${API_URL}/api/fitness/history`).then((r) => r.ok ? r.json() : {}),
+    ]).then(([logsRes, setsRes, historyData]) => {
       setEntries((logsRes.data || []).map(toEntryShape))
       setLastSession(buildLastSession(setsRes.data || []))
+      setExerciseHistory(historyData && typeof historyData === 'object' ? historyData : {})
       setLoading(false)
     })
   }, [])
@@ -112,13 +117,14 @@ export default function FitnessLog() {
           defaultDuration={template.duration}
           defaultNotes={template.notes}
           lastSession={lastSession}
+          exerciseHistory={exerciseHistory}
         />
       </div>
 
       <div className="pb-6">
         {loading
           ? <p className="text-center text-sm text-zinc-600 py-10">Loading…</p>
-          : <WorkoutHistory entries={entries} />
+          : <WorkoutHistory entries={entries} exerciseHistory={exerciseHistory} />
         }
       </div>
     </div>

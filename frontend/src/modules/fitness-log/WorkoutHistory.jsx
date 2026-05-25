@@ -1,3 +1,5 @@
+import ExerciseSparkline from './ExerciseSparkline'
+
 const TYPE_EMOJI = { Push: '💪', Pull: '🏋️', Legs: '🦵', Cardio: '🏃', Rest: '😴' }
 const TYPE_BADGE = {
   Push:   'bg-blue-500/15 text-blue-300',
@@ -11,7 +13,7 @@ function formatDate(iso) {
   return new Date(iso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
 }
 
-function WorkoutCard({ entry }) {
+function WorkoutCard({ entry, exerciseHistory }) {
   const exercises = entry.workout_exercises || []
   return (
     <div className="bg-zinc-900 rounded-2xl border border-zinc-800 p-4">
@@ -27,7 +29,7 @@ function WorkoutCard({ entry }) {
         </div>
         <div className="text-right shrink-0">
           {entry.duration != null && <p className="text-sm font-semibold text-zinc-200">{entry.duration} min</p>}
-          {entry.weight  != null && <p className="text-xs text-zinc-500 mt-0.5">{entry.weight} kg</p>}
+          {entry.weight   != null && <p className="text-xs text-zinc-500 mt-0.5">{entry.weight} kg</p>}
         </div>
       </div>
 
@@ -37,10 +39,16 @@ function WorkoutCard({ entry }) {
             const parts = []
             if (ex.sets && ex.reps) parts.push(`${ex.sets}×${ex.reps}`)
             if (ex.weight_kg)        parts.push(`${ex.weight_kg} kg`)
+            const history = exerciseHistory?.[ex.name]
             return (
-              <li key={i} className="text-xs">
-                <span className="font-medium text-zinc-300">{ex.name}</span>
-                {parts.length > 0 && <span className="text-zinc-500"> — {parts.join(' @ ')}</span>}
+              <li key={i} className="flex items-center justify-between gap-2">
+                <div className="flex-1 min-w-0 text-xs">
+                  <span className="font-medium text-zinc-300">{ex.name}</span>
+                  {parts.length > 0 && (
+                    <span className="text-zinc-500"> — {parts.join(' @ ')}</span>
+                  )}
+                </div>
+                <ExerciseSparkline sessions={history} />
               </li>
             )
           })}
@@ -54,7 +62,7 @@ function WorkoutCard({ entry }) {
   )
 }
 
-export default function WorkoutHistory({ entries = [] }) {
+export default function WorkoutHistory({ entries = [], exerciseHistory = {} }) {
   if (!entries.length) {
     return <div className="text-center py-10 text-zinc-600 text-sm">No workouts logged yet.</div>
   }
@@ -62,7 +70,9 @@ export default function WorkoutHistory({ entries = [] }) {
     <div className="px-4 pb-4">
       <p className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-3 px-1">Past Workouts</p>
       <div className="space-y-3">
-        {entries.map((entry, i) => <WorkoutCard key={i} entry={entry} />)}
+        {entries.map((entry, i) => (
+          <WorkoutCard key={i} entry={entry} exerciseHistory={exerciseHistory} />
+        ))}
       </div>
     </div>
   )
