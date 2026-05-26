@@ -36,7 +36,6 @@ async function create(req, res) {
   res.status(201).json(data)
 }
 
-// Shared helper: reduce a flat array of set rows into
 // { [fitness_log_id]: { date, sets: [{weight_kg, reps}] } }
 function groupBySession(rows) {
   const map = {}
@@ -47,7 +46,7 @@ function groupBySession(rows) {
   return map
 }
 
-// Reduce sessions to [{date, best_weight, best_reps}] last 5 desc
+// [{date, best_weight, best_reps}] last 5 desc
 function toSessionSummaries(sessionMap) {
   return Object.values(sessionMap)
     .map((s) => {
@@ -55,17 +54,31 @@ function toSessionSummaries(sessionMap) {
         (b, cur) => (Number(cur.weight_kg) || 0) > (Number(b.weight_kg) || 0) ? cur : b,
         s.sets[0] || {}
       )
-      return {
-        date:        s.date,
-        best_weight: Number(best.weight_kg) || null,
-        best_reps:   Number(best.reps)      || null,
-      }
+      return { date: s.date, best_weight: Number(best.weight_kg) || null, best_reps: Number(best.reps) || null }
     })
     .sort((a, b) => new Date(b.date) - new Date(a.date))
     .slice(0, 5)
 }
 
-// GET /api/fitness/history — all exercises in one call
+// Compute all-time PBs from raw rows
+// pbWeight = heaviest set ever  |  pbReps = most reps ever
+function computePBs(rows) {
+  let pbWeight = null
+  let pbReps   = null
+  for (const row of (rows || [])) {
+    const w = Number(row.weight_kg) || 0
+    const r = Number(row.reps)      || 0
+    if (w > 0 && (!pbWeight || w > Number(pbWeight.weight_kg))) {
+      pbWeight = { weight_kg: w, reps: r || null, date: row.created_at }
+    }
+    if (r > 0 && (!pbReps || r > Number(pbReps.reps))) {
+      pbReps = { reps: r, weight_kg: w || null, date: row.created_at }
+    }
+  }
+  return { pbWeight, pbReps }
+}
+
+// GET /api/fitness/history — { exerciseName: { sessions, pbWeight, pbReps } }
 async function allHistory(req, res) {
   const { data, error } = await supabase
     .from('workout_sets')
@@ -76,32 +89,50 @@ async function allHistory(req, res) {
 
   const byExercise = {}
   for (const row of (data || [])) {
-    if (!byExercise[row.exercise_name]) byExercise[row.exercise_name] = {}
-    if (!byExercise[row.exercise_name][row.fitness_log_id])
-      byExercise[row.exercise_name][row.fitness_log_id] = { date: row.created_at, sets: [] }
-    byExercise[row.exercise_name][row.fitness_log_id].sets.push({
-      weight_kg: row.weight_kg, reps: row.reps,
-    })
+    if (!byExercise[row.exercise_name]) byExercise[row.exercise_name] = { sessionMap: {}, rows: [] }
+    const e = byExercise[row.exercise_name]
+    e.rows.push(row)
+    if (!e.sessionMap[row.fitness_log_id])
+      e.sessionMap[row.fitness_log_id] = { date: row.created_at, sets: [] }
+    e.sessionMap[row.fitness_log_id].sets.push({ weight_kg: row.weight_kg, reps: row.reps })
   }
 
   const result = {}
-  for (const [name, sessionMap] of Object.entries(byExercise)) {
-    result[name] = toSessionSummaries(sessionMap)
+  for (const [name, { sessionMap, rows }] of Object.entries(byExercise)) {
+    const { pbWeight, pbReps } = computePBs(rows)
+    result[name] = { sessions: toSessionSummaries(sessionMap), pbWeight, pbReps }
   }
   res.json(result)
 }
 
-// GET /api/fitness/history/:exerciseName — single exercise
+// GET /api/fitness/history/:exerciseName — { sessions, pbWeight, pbReps, lastSession }
 async function exerciseHistory(req, res) {
   const name = decodeURIComponent(req.params.exerciseName)
   const { data, error } = await supabase
     .from('workout_sets')
-    .select('exercise_name, weight_kg, reps, created_at, fitness_log_id')
+    .select('exercise_name, set_number, weight_kg, reps, created_at, fitness_log_id')
     .eq('exercise_name', name)
     .order('created_at', { ascending: false })
     .limit(100)
   if (error) return res.status(500).json({ error: error.message })
-  res.json(toSessionSummaries(groupBySession(data)))
+
+  const rows = data || []
+  const { pbWeight, pbReps } = computePBs(rows)
+  const sessions = toSessionSummaries(groupBySession(rows))
+
+  // Build lastSession: { setNumber: { weight_kg, reps } } from most recent log
+  let lastSession = null
+  if (rows.length) {
+    const latestId = rows[0].fitness_log_id
+    lastSession = {}
+    for (const row of rows) {
+      if (row.fitness_log_id !== latestId) break
+      if (row.set_number != null)
+        lastSession[row.set_number] = { weight_kg: row.weight_kg, reps: row.reps }
+    }
+  }
+
+  res.json({ sessions, pbWeight, pbReps, lastSession })
 }
 
 module.exports = { list, create, allHistory, exerciseHistory }

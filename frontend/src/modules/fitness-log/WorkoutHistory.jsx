@@ -40,6 +40,7 @@ function WorkoutCard({ entry, exerciseHistory }) {
             if (ex.sets && ex.reps) parts.push(`${ex.sets}×${ex.reps}`)
             if (ex.weight_kg)        parts.push(`${ex.weight_kg} kg`)
             const history = exerciseHistory?.[ex.name]
+            const sessions = history?.sessions ?? history  // support old array shape too
             return (
               <li key={i} className="flex items-center justify-between gap-2">
                 <div className="flex-1 min-w-0 text-xs">
@@ -48,7 +49,7 @@ function WorkoutCard({ entry, exerciseHistory }) {
                     <span className="text-zinc-500"> — {parts.join(' @ ')}</span>
                   )}
                 </div>
-                <ExerciseSparkline sessions={history} />
+                <ExerciseSparkline sessions={sessions} />
               </li>
             )
           })}

@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import WorkoutForm from '../modules/fitness-log/WorkoutForm'
 import WorkoutHistory from '../modules/fitness-log/WorkoutHistory'
 import { getTodayTemplate } from '../data/workoutTemplates'
+import { bestFromForm } from '../modules/fitness-log/ExerciseList'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
 
@@ -33,6 +34,8 @@ export default function FitnessLog() {
   const [loading, setLoading]               = useState(true)
   const [lastSession, setLastSession]       = useState({})
   const [exerciseHistory, setExerciseHistory] = useState({})
+  const [newPBs, setNewPBs]                 = useState([])
+  const pbTimerRef                          = useRef(null)
   const template = getTodayTemplate()
 
   useEffect(() => {
@@ -97,6 +100,27 @@ export default function FitnessLog() {
     if (setsToInsert.length) await supabase.from('workout_sets').insert(setsToInsert)
 
     setEntries((prev) => [toEntryShape({ ...data, workout_exercises: [] }), ...prev])
+
+    // Detect new PBs
+    const pbs = []
+    for (const ex of validExercises) {
+      const hist = exerciseHistory[ex.name]
+      const pbWeight = hist?.pbWeight
+      const pbReps   = hist?.pbReps
+      const curBest  = bestFromForm(ex.sets)
+      if (!curBest) continue
+      const w = Number(curBest.weight_kg) || 0
+      const r = Number(curBest.reps)      || 0
+      const isNewPBWeight = w > 0 && pbWeight && w > (Number(pbWeight.weight_kg) || 0)
+      const isNewPBReps   = r > 0 && pbReps   && r > (Number(pbReps.reps)       || 0)
+      const isFirstEver   = !pbWeight && !pbReps && (w > 0 || r > 0)
+      if (isNewPBWeight || isNewPBReps || isFirstEver) pbs.push(ex.name)
+    }
+    if (pbs.length) {
+      setNewPBs(pbs)
+      clearTimeout(pbTimerRef.current)
+      pbTimerRef.current = setTimeout(() => setNewPBs([]), 6000)
+    }
   }
 
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
@@ -108,6 +132,15 @@ export default function FitnessLog() {
         <h1 className="text-3xl font-bold text-zinc-50 tracking-tight">{today}</h1>
         <p className="text-sm text-blue-300 mt-1.5 font-medium">Today: {template.label} Day</p>
       </div>
+
+      {newPBs.length > 0 && (
+        <div className="mx-4 mb-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl px-4 py-3">
+          <p className="text-sm font-bold text-amber-400">🏆 New Personal Best{newPBs.length > 1 ? 's' : ''}!</p>
+          {newPBs.map((name) => (
+            <p key={name} className="text-xs text-amber-300/80 mt-0.5">{name}</p>
+          ))}
+        </div>
+      )}
 
       <div className="mx-4 bg-zinc-900 rounded-2xl border border-zinc-800 overflow-hidden mb-4">
         <WorkoutForm

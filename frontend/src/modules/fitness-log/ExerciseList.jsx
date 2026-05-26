@@ -11,7 +11,6 @@ const XIcon = () => (
 
 const inputCls = 'bg-zinc-800 border border-zinc-700 text-zinc-100 text-sm text-center py-1.5 rounded-lg focus:outline-none focus:border-blue-500 transition-colors placeholder:text-zinc-600'
 
-// Best set from lastSets map { setNum: {weight_kg, reps} }
 function bestFromMap(lastSets) {
   if (!lastSets) return null
   const entries = Object.values(lastSets)
@@ -19,8 +18,7 @@ function bestFromMap(lastSets) {
   return entries.reduce((b, s) => (Number(s.weight_kg) || 0) > (Number(b.weight_kg) || 0) ? s : b, entries[0])
 }
 
-// Best set from current form sets array (only count weight-filled sets)
-function bestFromForm(sets) {
+export function bestFromForm(sets) {
   const filled = sets.filter((s) => s.weight_kg !== '' && Number(s.weight_kg) > 0)
   if (!filled.length) return null
   return filled.reduce((b, s) => (Number(s.weight_kg) || 0) > (Number(b.weight_kg) || 0) ? s : b, filled[0])
@@ -33,30 +31,53 @@ function calcTrend(curBest, lastBest) {
   if (lW > 0 && cW > 0) {
     return cW > lW ? 'up' : cW < lW ? 'down' : cR > lR ? 'up' : cR < lR ? 'down' : 'same'
   }
-  if (lR > 0 && cR > 0) {
-    return cR > lR ? 'up' : cR < lR ? 'down' : 'same'
-  }
+  if (lR > 0 && cR > 0) return cR > lR ? 'up' : cR < lR ? 'down' : 'same'
   return null
 }
 
+function calcSetIndicator(set, lastSet, pbWeight, pbReps, hasHistory) {
+  const w = Number(set.weight_kg) || 0
+  const r = Number(set.reps) || 0
+  if (!w && !r) return null
+  if (!hasHistory) return 'new'
+  const isPBWeight = pbWeight && w > 0 && w > (Number(pbWeight.weight_kg) || 0)
+  const isPBReps   = pbReps   && r > 0 && r > (Number(pbReps.reps)       || 0)
+  if (isPBWeight || isPBReps) return 'pb'
+  const lW = Number(lastSet?.weight_kg) || 0
+  const lR = Number(lastSet?.reps)      || 0
+  if (lW > 0 && w > 0) return w > lW ? 'up' : w < lW ? 'down' : r > lR ? 'up' : r < lR ? 'down' : 'same'
+  if (lR > 0 && r > 0) return r > lR ? 'up' : r < lR ? 'down' : 'same'
+  return null
+}
+
+const TREND_MAP = {
+  up:   { label: '↑',   cls: 'text-green-400  bg-green-400/10'   },
+  down: { label: '↓',   cls: 'text-red-400    bg-red-400/10'     },
+  same: { label: '→',   cls: 'text-yellow-400 bg-yellow-400/10'  },
+  new:  { label: 'NEW', cls: 'text-blue-400   bg-blue-400/10'    },
+}
+const SET_IND_MAP = {
+  pb:   { label: '🏆', cls: '' },
+  up:   { label: '↑',  cls: 'text-green-400' },
+  down: { label: '↓',  cls: 'text-red-400'   },
+  same: { label: '→',  cls: 'text-zinc-600'  },
+  new:  { label: '✦',  cls: 'text-blue-400'  },
+}
+
 function TrendBadge({ trend }) {
-  if (!trend) return null
-  const MAP = {
-    up:   { label: '↑', cls: 'text-green-400 bg-green-400/10' },
-    down: { label: '↓', cls: 'text-red-400   bg-red-400/10'   },
-    same: { label: '→', cls: 'text-yellow-400 bg-yellow-400/10' },
-    new:  { label: 'NEW', cls: 'text-blue-400  bg-blue-400/10'  },
-  }
-  const { label, cls } = MAP[trend]
+  if (!trend || !TREND_MAP[trend]) return null
+  const { label, cls } = TREND_MAP[trend]
   return <span className={`text-xs font-bold px-1.5 py-0.5 rounded-md shrink-0 ${cls}`}>{label}</span>
 }
 
-function SetRow({ setNum, set, lastSet, onChange }) {
-  const prevReps = lastSet?.reps   != null ? lastSet.reps   : null
+function SetRow({ setNum, set, lastSet, pbWeight, pbReps, hasHistory, onChange }) {
+  const prevReps = lastSet?.reps      != null ? lastSet.reps      : null
   const prevWt   = lastSet?.weight_kg != null ? lastSet.weight_kg : null
   const hint = (prevWt || prevReps)
     ? `prev: ${prevReps ?? '?'} × ${prevWt ? prevWt + 'kg' : '—'}`
     : null
+  const ind = calcSetIndicator(set, lastSet, pbWeight, pbReps, hasHistory)
+  const indMeta = ind ? SET_IND_MAP[ind] : null
   return (
     <div className="flex items-center gap-2 py-1.5">
       <span className="text-xs text-zinc-600 w-6 shrink-0 tabular-nums">S{setNum}</span>
@@ -68,6 +89,7 @@ function SetRow({ setNum, set, lastSet, onChange }) {
         onChange={(e) => onChange({ ...set, weight_kg: e.target.value })}
         placeholder="—" className={`w-16 px-1 ${inputCls}`} />
       <span className="text-xs text-zinc-600">kg</span>
+      {indMeta && <span className={`text-xs shrink-0 ${indMeta.cls}`}>{indMeta.label}</span>}
       {hint && <span className="text-xs text-zinc-700 tabular-nums ml-0.5">{hint}</span>}
     </div>
   )
@@ -77,7 +99,6 @@ function ExerciseCard({ ex, index, lastSets, propHistory, onChange, onRemove }) 
   const [fetchedHistory, setFetchedHistory] = useState(null)
   const debounceRef = useRef(null)
 
-  // Debounce-fetch history when name changes and pre-loaded data isn't available
   useEffect(() => {
     const name = ex.name.trim()
     if (!name || propHistory !== undefined) return
@@ -91,17 +112,31 @@ function ExerciseCard({ ex, index, lastSets, propHistory, onChange, onRemove }) 
     return () => clearTimeout(debounceRef.current)
   }, [ex.name, propHistory])
 
-  const history  = propHistory ?? fetchedHistory
-  // lastBest: prefer per-set Supabase data; fall back to history API summary
-  const lastBest = bestFromMap(lastSets)
-    ?? (history?.[0]?.best_weight ? { weight_kg: history[0].best_weight, reps: history[0].best_reps } : null)
-  const curBest  = bestFromForm(ex.sets)
-  const hasHistory = !!(lastBest || history?.length)
-  const trend = !hasHistory ? 'new' : calcTrend(curBest, lastBest)
+  const history    = propHistory ?? fetchedHistory
+  const sessions   = history?.sessions   ?? null
+  const pbWeight   = history?.pbWeight   ?? null
+  const pbReps     = history?.pbReps     ?? null
+  // For custom exercises fetched via debounce, we also get lastSession per-set data
+  const effectiveLastSets = lastSets ?? history?.lastSession ?? null
+
+  const lastBest = bestFromMap(effectiveLastSets)
+    ?? (sessions?.[0]?.best_weight ? { weight_kg: sessions[0].best_weight, reps: sessions[0].best_reps } : null)
+  const curBest    = bestFromForm(ex.sets)
+  const hasHistory = !!(lastBest || sessions?.length || pbWeight || pbReps)
+  const trend      = !hasHistory ? 'new' : calcTrend(curBest, lastBest)
 
   const lastLabel = lastBest?.weight_kg
-    ? `Last session: ${lastBest.weight_kg}kg × ${lastBest.reps ?? '?'} (best set)`
-    : null
+    ? `Last: ${lastBest.weight_kg}kg × ${lastBest.reps ?? '?'}` : null
+
+  let pbLabel = null
+  if (pbWeight || pbReps) {
+    const parts = []
+    if (pbWeight) parts.push(`PB: ${pbWeight.weight_kg}kg × ${pbWeight.reps ?? '?'}`)
+    if (pbReps && (!pbWeight || pbReps.reps !== pbWeight.reps || pbReps.weight_kg !== pbWeight.weight_kg)) {
+      parts.push(`Best reps: ${pbReps.reps} × ${pbReps.weight_kg ? pbReps.weight_kg + 'kg' : '—'}`)
+    }
+    pbLabel = parts.join('  |  ')
+  }
 
   function updateSet(si, upd) { onChange(index, { ...ex, sets: ex.sets.map((s, j) => j === si ? upd : s) }) }
   function addSet() {
@@ -128,21 +163,21 @@ function ExerciseCard({ ex, index, lastSets, propHistory, onChange, onRemove }) 
         </button>
       </div>
 
-      {/* Reference line */}
-      <div className="flex items-center justify-between ml-1 mb-1 min-h-[18px]">
+      <div className="ml-1 mb-1 min-h-[18px] space-y-0.5">
         {lastLabel
-          ? <span className="text-xs text-zinc-500">{lastLabel}</span>
-          : hasHistory === false && ex.name.trim()
-            ? <span className="text-xs text-zinc-700">First time — no history</span>
-            : null
-        }
-        {history?.length >= 2 && <ExerciseSparkline sessions={history} />}
+          ? <p className="text-xs text-zinc-500">{lastLabel}</p>
+          : (!hasHistory && ex.name.trim())
+            ? <p className="text-xs text-zinc-700">First time — no history</p>
+            : null}
+        {pbLabel && <p className="text-xs text-amber-500/80">{pbLabel}</p>}
+        {sessions?.length >= 2 && <ExerciseSparkline sessions={sessions} />}
       </div>
 
       <div className="ml-1">
         {ex.sets.map((set, si) => (
           <SetRow key={si} setNum={si + 1} set={set}
-            lastSet={lastSets?.[si + 1]}
+            lastSet={effectiveLastSets?.[si + 1]}
+            pbWeight={pbWeight} pbReps={pbReps} hasHistory={hasHistory}
             onChange={(upd) => updateSet(si, upd)} />
         ))}
       </div>
